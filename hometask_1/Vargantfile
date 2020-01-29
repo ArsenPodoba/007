@@ -1,0 +1,17 @@
+$script = <<-SCRIPT
+apt-get update
+apt-get install -y apache2
+SCRIPT
+
+Vagrant.configure("2") do |config|
+  config.vm.define "Ubuntu" do |ubuntu|
+      ubuntu.vm.box = "ubuntu/bionic64"
+      ubuntu.vm.provision "shell", inline: $script
+      ubuntu.vm.network :forwarded_port, guest: 80, host:8080
+  end
+  
+  config.vm.define "Centos" do |centos|
+      centos.vm.box = "centos/7"
+  end
+
+end
