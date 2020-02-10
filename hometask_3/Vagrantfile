@@ -1,0 +1,43 @@
+$script = <<-SCRIPT
+apt-get -y update
+apt-get -y install mysql-server 
+apt-get -y install mysql-server
+sudo systemctl start mysql.service
+sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '123456';
+FLUSH PRIVILEGES;
+CREATE DATABASE CONFLUENCE CHARACTER SET utf8 COLLATE utf8_bin;
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '123456' WITH GRANT OPTION;"
+sudo sed -i "s/.*bind-address.*/bind-address =      0.0.0.0/" /etc/mysql/mysql.conf.d/mysqld.cnf
+sudo echo transaction-isolation=READ-COMMITTED >> /etc/mysql/mysql.conf.d/mysqld.cnf
+sudo systemctl restart mysql.service
+
+if [ ! -f /vagrant/atlassian-confluence-7.3.1-x64.bin ]
+then
+  cd /vagrant
+  wget  https://product-downloads.atlassian.com/software/confluence/downloads/atlassian-confluence-7.3.1-x64.bin
+  cd
+fi
+echo "app.confHome=/var/atlassian/application-data/confluence
+app.install.service$Boolean=false
+httpPort$Long=8090
+portChoice=default
+launch.application$Boolean=false
+sys.adminRights$Boolean=true
+sys.confirmedUpdateInstallationString=false
+sys.installationDir=/opt/atlassian/confluence7_3_1
+sys.languageId=en" > /vagrant/response.varfile
+chmod +x /vagrant/atlassian-confluence-7.3.1-x64.bin
+/vagrant/atlassian-confluence-7.3.1-x64.bin -q -varfile /vagrant/response.varfile
+rm /vagrant/response.varfile
+SCRIPT
+
+Vagrant.configure("2") do |config|
+    config.vm.box = "ubuntu/bionic64"
+    config.vm.provision "shell", inline: $script
+    config.vm.network :forwarded_port, guest: 8090, host:8080
+    config.vm.network :forwarded_port, guest: 3306, host: 3306
+    config.vm.provider "virtualbox" do |v|
+      v.memory = 5000
+      v.cpus = 2
+    end
+end
